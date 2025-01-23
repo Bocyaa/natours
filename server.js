@@ -46,7 +46,7 @@ process.on('uncoughtException', (err) => {
 // SIGTERM signal will be sent from Heroku every 24h, and it shuts down the app.
 // We handle that shut down gracefully: first finish all ongoing proccesses and then shut down.
 process.on('SIGTERM', () => {
-  console.log('SIGTERM RECEIVED. Shutting down gracefully');
+  console.log('❗️ SIGTERM RECEIVED. Shutting down gracefully');
   server.close(() => {
     console.log('⛔️ Process terminated!');
   });

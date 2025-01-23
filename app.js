@@ -7,6 +7,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
@@ -21,7 +22,8 @@ const app = express();
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 
-// 1) GLOBAL MIDDLEWARES
+// 1) GLOBAL MIDDLEWARES -----------------------------------
+
 // Serving static files
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -98,6 +100,8 @@ app.use(
   }),
 );
 
+app.use(compression());
+
 // Test middleware
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
@@ -105,7 +109,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 3) ROUTES
+// 3) ROUTES -----------------------------------
 app.use('/', viewRouter);
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);

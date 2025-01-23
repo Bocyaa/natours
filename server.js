@@ -1,7 +1,6 @@
 const fs = require('fs');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-// This is for reading the environment variables from the config.env file
 
 // Read the environment variables from the config.env file
 dotenv.config({ path: './config.env' });
@@ -10,7 +9,7 @@ const app = require('./app'); // Import the app
 // Connect to the database
 const DB = process.env.DATABASE.replace(
   '<PASSWORD>',
-  process.env.DATABASE_PASSWORD
+  process.env.DATABASE_PASSWORD,
 );
 mongoose.connect(DB).then(() => console.log('DB connection successful!'));
 

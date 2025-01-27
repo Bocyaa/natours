@@ -1,0 +1,36 @@
+–– Used Technologies and Apps ––
+
+Node.js
+Express.js
+MongoDB
+Mongoose
+
+Npm
+Git
+GitHub
+Postman
+Compass
+Heroku
+Mailtrap
+Stripe
+
+VSCode
+Chrome
+ChatGPT
+
+JavaScript 
+HTML
+CSS
+PUG
+
+JWT
+MapBox
+Axios
+Parcel
+
+...more
+
+
+–– Useful Links ––
+
+www.giftofspeed.com

@@ -1,42 +1,61 @@
+// 1. Core Node.js Modules
 const path = require('path');
+
+// 2. Third-Party Packages
+// 2.1 Express framework and middleware
 const express = require('express');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
-const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
-const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const cors = require('cors');
+const morgan = require('morgan');
 
+// 2.2 Security Related Packages
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp');
+
+// 3. Custom Modules
+// 3.1 Utilities and error handling
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
+
+// 3.2 Routers
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/reviewRoutes');
 const bookingRouter = require('./routes/bookingRoutes');
-const bookingCtrl = require('./controllers/bookingController');
 const viewRouter = require('./routes/viewRoutes');
+
+// 3.3 Controllers
+const bookingCtrl = require('./controllers/bookingController');
+
+// --------------------------------------------------------------------
+// APP INITIALIZATION
+// --------------------------------------------------------------------
 
 const app = express();
 
+// Enable reverse proxy support (for Heroku, Nginx, etc.)
 app.enable('trust proxy');
 
+// Set Pug as the view engine and define views directory
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 
-// 1) GLOBAL MIDDLEWARES -----------------------------------
+// --------------------------------------------------------------------
+// 1) GLOBAL MIDDLEWARES
+// --------------------------------------------------------------------
 
-// Implement CORS
+// Implement CORS (Cross-Origin-Resource-Sharing)
 app.use(cors());
-app.options('*', cors());
-// app.options('/api/v1/tours/:id', cors());
+app.options('*', cors()); // Allow pre-flight requests for all routes
 
-// Serving static files
+// Serving static files (e.g. images, CSS, JS)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Set security HTTP headers
+// Set security HTTP headers using Helmet
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -64,44 +83,45 @@ app.use(
           'https://js.stripe.com',
         ],
         workerSrc: ["'self'", 'blob:'],
-        childSrc: ["'self'", 'blob:'], // Existing directive
-        frameSrc: ["'self'", 'https://js.stripe.com'], // Add frame-src directive for Stripe
+        childSrc: ["'self'", 'blob:'],
+        frameSrc: ["'self'", 'https://js.stripe.com'],
       },
     },
   }),
 );
 
-// Development logging
+// Logging middleware - only in development mode
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Limit requests from same API
+// Rate limiting to prevent abuse (100 requests per hour per IP)
 const limiter = rateLimit({
   max: 100,
-  windowMs: 60 * 60 * 1000,
+  windowMs: 60 * 60 * 1000, // 1 hour
   message: 'Too many requests from this IP, please try again in an hour!',
 });
 app.use('/api', limiter);
 
+// Stripe webhook for checkout (needs raw body parsing)
 app.post(
   '/webhook-checkout',
   express.raw({ type: 'application/json' }),
   bookingCtrl.webhookCheckout,
 );
 
-// Body parser, reading data from body into req.body
+// Parse JSON and URL-encoded data (body parsing )
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-app.use(cookieParser());
+app.use(cookieParser()); // Parse cookies
 
 // Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
 
-// Data sanitization against XSS
+// Data sanitization against XSS (Cross-Site Scripting)
 app.use(xss());
 
-// Prevent parameter pollution
+// Prevent parameter pollution (e.g. repeated query parameters)
 app.use(
   hpp({
     whitelist: [
@@ -115,26 +135,36 @@ app.use(
   }),
 );
 
+// Response compression for faster loading
 app.use(compression());
 
-// Test middleware
+// Custom middleware to add request timestamp
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
-  // console.log(req.cookies);
   next();
 });
 
-// 3) ROUTES -----------------------------------
+// --------------------------------------------------------------------
+// 2) ROUTE HANDLERS
+// --------------------------------------------------------------------
+
+// Define route handlers for different endpoints
 app.use('/', viewRouter);
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/bookings', bookingRouter);
 
+// Catch-all route handler for unhandled routes
 app.all('*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
+// Global error handling middleware
 app.use(globalErrorHandler);
+
+// --------------------------------------------------------------------
+// EXPORT APP
+// --------------------------------------------------------------------
 
 module.exports = app;
